@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import os
 import time
 from typing import Any, AsyncGenerator
@@ -147,14 +148,16 @@ def _augment_message_with_files(user_message: str, files: list[dict], cwd: str =
     )
     
     file_context = (
-        f"\n\n[用户上传了以下文件，请先用 files 工具读取它们的内容进行对账分析：]\n"
+        f"\n\n[系统提示] 用户上传了以下文件，已保存在沙箱的 uploads/ 目录下：\n"
         f"{file_list}\n\n"
-        f"这些文件已经保存在工作目录中，你可以用 files read 直接读取（如 files read {file_names[0] if file_names else 'uploaded_file'}）。"
+        f"请用 code_interpreter（Python + pandas）从 uploads/<文件名> 读取数据"
+        f"（CSV 用 read_csv，Excel 用 read_excel，缺 openpyxl 先用 commands 安装 pip install openpyxl），"
+        f"再逐条对账。不要去本地或其它目录找它们，它们就在沙箱当前工作目录的 uploads/ 下。"
     )
     
     # If user message is empty or generic, provide a clear instruction
     if not user_message.strip() or user_message.strip() == "请帮我对账以下文件":
-        return f"请帮我对账以下上传的文件：\n{file_list}\n\n请先读取每个文件的内容，了解其列名和数据结构，然后进行逐条对账分析。"
+        return f"请帮我对账以下上传的文件（已存于沙箱 uploads/ 目录）：\n{file_list}\n\n请用 code_interpreter 从 uploads/<文件名> 读取每个文件，了解列结构后逐条对账，最后给出差异报告。"
     
     return user_message + file_context
 
@@ -254,30 +257,39 @@ async def handler(ctx: Any) -> AsyncGenerator[str, None]:
     # Parse uploaded files
     uploaded_files = _parse_uploaded_files(body) if isinstance(body, dict) else []
     
-    # Write uploaded files to working directory so the agent's `files` tool can read them
-    cwd = os.getcwd()
+    # Write uploaded files INTO THE SANDBOX (not the agent-process filesystem).
+    # The agent's files/code_interpreter tools run in an isolated sandbox container,
+    # which is NOT the same filesystem as os.getcwd() here — a plain open() write
+    # lands somewhere the agent can never see (root cause of "uploaded but not found").
+    # We materialize each upload inside the sandbox via run_code (base64 -> bytes,
+    # binary-safe, works for .xlsx) under an `uploads/` dir in the sandbox cwd.
     if uploaded_files:
-        try:
-            logger.log(f"[upload] cwd={cwd}, file_count={len(uploaded_files)}")
+        sandbox = getattr(ctx, "sandbox", None)
+        if sandbox is None:
+            logger.error("[upload] ctx.sandbox is unavailable; cannot place files in the sandbox")
+        else:
+            logger.log(f"[upload] writing {len(uploaded_files)} file(s) into sandbox")
             for f in uploaded_files:
-                fname = f.get("name", "uploaded_file")
+                fname = os.path.basename(f.get("name") or "uploaded_file") or "uploaded_file"
                 fdata = f.get("data", "")
-                if fdata:
-                    # Ensure safe filename
-                    safe_name = os.path.basename(fname) or "uploaded_file"
-                    file_path = os.path.join(cwd, safe_name)
-                    decoded = base64.b64decode(fdata)
-                    with open(file_path, "wb") as fh:
-                        fh.write(decoded)
-                    file_size = os.path.getsize(file_path)
-                    logger.log(f"[upload] saved: {safe_name} at {file_path} ({file_size} bytes)")
-                else:
+                if not fdata:
                     logger.log(f"[upload] WARNING: {fname} has empty data, skipping")
-        except Exception as e:
-            logger.error(f"[upload] failed to write files: {e}")
+                    continue
+                code = (
+                    "import base64, os\n"
+                    "os.makedirs('uploads', exist_ok=True)\n"
+                    f"_p = os.path.join('uploads', {json.dumps(fname)})\n"
+                    f"open(_p, 'wb').write(base64.b64decode({json.dumps(fdata)}))\n"
+                    "print('SAVED', os.path.abspath(_p), os.path.getsize(_p))\n"
+                )
+                try:
+                    result = await sandbox.run_code(code, language="python")
+                    logger.log(f"[upload] sandbox saved {fname}: {result!r}")
+                except Exception as e:
+                    logger.error(f"[upload] sandbox run_code failed for {fname}: {e}")
     
     # Augment user message with file context
-    user_message = _augment_message_with_files(user_message, uploaded_files, cwd)
+    user_message = _augment_message_with_files(user_message, uploaded_files)
     
     if not user_message.strip():
         yield sse_event("error", {"message": "'message' is required"})

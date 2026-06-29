@@ -132,7 +132,7 @@ def _parse_uploaded_files(body: dict) -> list[dict]:
     return []
 
 
-def _augment_message_with_files(user_message: str, files: list[dict]) -> str:
+def _augment_message_with_files(user_message: str, files: list[dict], cwd: str = "") -> str:
     """
     Augment the user message with file context so the agent knows about uploaded files.
     """
@@ -140,11 +140,16 @@ def _augment_message_with_files(user_message: str, files: list[dict]) -> str:
         return user_message
     
     file_names = [f.get("name", f"file_{i}") for i, f in enumerate(files)]
-    file_list = "\n".join(f"- {name}" for name in file_names)
+    file_sizes = [f.get("size", 0) for i, f in enumerate(files)]
+    file_list = "\n".join(
+        f"- {name} ({size / 1024:.1f} KB)" 
+        for name, size in zip(file_names, file_sizes)
+    )
     
     file_context = (
         f"\n\n[用户上传了以下文件，请先用 files 工具读取它们的内容进行对账分析：]\n"
-        f"{file_list}"
+        f"{file_list}\n\n"
+        f"这些文件已经保存在工作目录中，你可以用 files read 直接读取（如 files read {file_names[0] if file_names else 'uploaded_file'}）。"
     )
     
     # If user message is empty or generic, provide a clear instruction
@@ -250,23 +255,29 @@ async def handler(ctx: Any) -> AsyncGenerator[str, None]:
     uploaded_files = _parse_uploaded_files(body) if isinstance(body, dict) else []
     
     # Write uploaded files to working directory so the agent's `files` tool can read them
+    cwd = os.getcwd()
     if uploaded_files:
         try:
+            logger.log(f"[upload] cwd={cwd}, file_count={len(uploaded_files)}")
             for f in uploaded_files:
                 fname = f.get("name", "uploaded_file")
                 fdata = f.get("data", "")
                 if fdata:
                     # Ensure safe filename
                     safe_name = os.path.basename(fname) or "uploaded_file"
-                    file_path = os.path.join(os.getcwd(), safe_name)
+                    file_path = os.path.join(cwd, safe_name)
+                    decoded = base64.b64decode(fdata)
                     with open(file_path, "wb") as fh:
-                        fh.write(base64.b64decode(fdata))
-                    logger.log(f"[upload] saved: {safe_name} ({len(fdata)} b64 chars)")
+                        fh.write(decoded)
+                    file_size = os.path.getsize(file_path)
+                    logger.log(f"[upload] saved: {safe_name} at {file_path} ({file_size} bytes)")
+                else:
+                    logger.log(f"[upload] WARNING: {fname} has empty data, skipping")
         except Exception as e:
             logger.error(f"[upload] failed to write files: {e}")
     
     # Augment user message with file context
-    user_message = _augment_message_with_files(user_message, uploaded_files)
+    user_message = _augment_message_with_files(user_message, uploaded_files, cwd)
     
     if not user_message.strip():
         yield sse_event("error", {"message": "'message' is required"})

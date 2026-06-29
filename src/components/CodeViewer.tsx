@@ -3,7 +3,6 @@ import styles from './CodeViewer.module.css';
 
 /* -- Tiny inline helpers -- */
 const Cmt  = ({ t }: { t: string }) => <span className={styles.cmt}>{t}</span>;
-const Kw   = ({ t }: { t: string }) => <span className={styles.kw}>{t}</span>;
 const Fn   = ({ t }: { t: string }) => <span className={styles.fn}>{t}</span>;
 const Str  = ({ t }: { t: string }) => <span className={styles.str}>{t}</span>;
 const Op   = ({ t }: { t: string }) => <span className={styles.op}>{t}</span>;

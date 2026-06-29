@@ -1,28 +1,28 @@
 const zh = {
   // Header
-  "app.title": "Claude Agent Starter",
-  "app.subtitle": "运行在 EdgeOne Makers 环境中，支持沙箱工具、会话记忆与可观测",
+  "app.title": "对账核对员",
+  "app.subtitle": "自动核对订单表、收款流水与平台账单，逐条找出差异",
 
   // Empty state
-  "empty.title": "Claude Agent Starter",
-  "empty.hint": "我是运行在 EdgeOne 环境中的 Claude 助手，可以调用沙箱工具、保存会话记忆，并帮助你完成各项任务。",
-  "empty.features": "沙箱工具 · Store 会话记忆 · 自动可观测",
+  "empty.title": "对账核对员",
+  "empty.hint": "我是你的专属对账助手。把订单表、收款流水、平台账单发给我，我会逐条核对：一方有另一方没有的、金额不一致的、重复记录……所有差异一个不落。",
+  "empty.features": "多表核对 · 金额比对 · 重复检测 · 差异报告",
 
   // Chat input
-  "chat.placeholder": "发消息…  ⏎ 发送 · Shift+⏎ 换行",
-  "chat.hint": "由 Claude Agent SDK + EdgeOne Makers 驱动 · 仅供演示",
+  "chat.placeholder": "粘贴数据或描述对账需求…  ⏎ 发送 · Shift+⏎ 换行",
+  "chat.hint": "支持上传 Excel/CSV 文件或直接粘贴表格数据 · 数据仅在当前会话中使用",
 
   // Preset questions
-  "preset.1": "使用终端命令检查当前系统时间和操作系统版本。",
-  "preset.2": "创建 /tmp/fib.py，写入计算斐波那契数列前 10 项的 Python 代码并执行，将结果打印出来。",
-  "preset.4": "访问 https://edgeone.ai 并总结页面内容。",
+  "preset.1": "我有一份订单表和一份收款流水，帮我核对一下有哪些订单没收款。",
+  "preset.2": "帮我把订单表、收款流水、平台账单三份数据放在一起核对，找出所有差异。",
+  "preset.4": "帮我检查这份数据有没有重复记录和异常金额。",
   "preset.screenshotEdgeOne": "截取 edgeone.ai 的网页图片。",
   "preset.skill.sandboxAlgorithms": "计算斐波那契数列前 20 个，并给出执行结果。",
 
   // Tool indicators
   "tool.commands": "终端命令",
   "tool.files": "文件操作",
-  "tool.codeRunner": "代码解释器",
+  "tool.codeRunner": "数据计算",
   "tool.browser": "浏览器",
 
   // Web search activity (in-bubble chip)
@@ -48,16 +48,16 @@ const zh = {
   "lang.switch": "English",
 
   // Sidebar
-  "sidebar.label": "会话列表",
-  "sidebar.title": "会话",
-  "sidebar.newChat": "新建聊天",
-  "sidebar.loading": "正在加载会话...",
+  "sidebar.label": "对账记录列表",
+  "sidebar.title": "对账记录",
+  "sidebar.newChat": "新建对账",
+  "sidebar.loading": "正在加载对账记录...",
   "sidebar.loadMore": "加载更多",
   "sidebar.loadingMore": "加载中...",
-  "sidebar.emptyTitle": "暂无会话",
-  "sidebar.emptyHint": "点击「新建聊天」开始第一段对话。",
-  "sidebar.delete": "删除会话",
-  "sidebar.deleteConfirm": "确定要永久删除这个会话吗？此操作不可恢复。",
+  "sidebar.emptyTitle": "暂无对账记录",
+  "sidebar.emptyHint": "点击「新建对账」开始第一次核对。",
+  "sidebar.delete": "删除对账记录",
+  "sidebar.deleteConfirm": "确定要永久删除这条对账记录吗？此操作不可恢复。",
 
   // Aria labels (button hover/screen-reader)
   "aria.send": "发送",

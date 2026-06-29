@@ -30,9 +30,9 @@ export default function CodeViewer() {
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.fileIcon}>&#x2B21;</span>
-          <span className={styles.filename}>handler<span className={styles.sep}>.</span>py</span>
+          <span className={styles.filename}>reconcile<span className={styles.sep}>.</span>py</span>
         </div>
-        <span className={styles.badge}>READ ONLY</span>
+        <span className={styles.badge}>对账流程</span>
       </div>
 
       {/* -- Code body -- */}
@@ -40,176 +40,118 @@ export default function CodeViewer() {
         <div className={styles.scanline} aria-hidden />
 
         <div className={styles.code}>
-          {/* ═══ Imports ═══ */}
+          {/* ═══ Step 1: Receive Data ═══ */}
           <L n={1}>
-            <Kw t="from " /><Va t="claude_agent_sdk" /><Kw t=" import " />
-            <Fn t="ClaudeAgentOptions" /><Op t=", " /><Fn t="create_sdk_mcp_server" /><Op t=", " /><Fn t="query" />
+            <Cmt t="# 步骤1：接收对账数据" />
           </L>
           <L n={2}>
-            <Kw t="from " /><Va t=".._model" /><Kw t=" import " />
-            <Fn t="collect_gateway_env" /><Op t=", " /><Fn t="resolve_model_name" />
+            <Va t="order_df" /><Op t=" = " />
+            <Fn t="load_data" /><Op t="(" /><Str t='"订单表.xlsx"' /><Op t=")" />
           </L>
-          <L n={3} />
-
-          {/* ═══ Handler ═══ */}
+          <L n={3}>
+            <Va t="payment_df" /><Op t=" = " />
+            <Fn t="load_data" /><Op t="(" /><Str t='"收款流水.csv"' /><Op t=")" />
+          </L>
           <L n={4}>
-            <Va t="SYSTEM_PROMPT" /><Op t=" = " /><Str t='"..."' />
+            <Va t="bill_df" /><Op t=" = " />
+            <Fn t="load_data" /><Op t="(" /><Str t='"平台账单.xlsx"' /><Op t=")" />
           </L>
           <L n={5} />
+
+          {/* ═══ Step 2: Duplicate Check ═══ */}
           <L n={6}>
-            <Kw t="async def " /><Fn t="handler" /><Op t="(" />
-            <Va t="context" /><Op t="):" />
+            <Cmt t="# 步骤2：单表自查 — 重复记录检测" />
           </L>
           <L n={7}>
-            <I /><Va t="message" /><Op t=" = " />
-            <Va t="context" /><Op t="." /><Va t="request" /><Op t="." /><Va t="body" />
-            <Op t="." /><Fn t="get" /><Op t="(" /><Str t='"message"' /><Op t=", " />
-            <Str t='""' /><Op t=")" />
+            <Va t="dup_orders" /><Op t=" = " />
+            <Fn t="find_duplicates" /><Op t="(" /><Va t="order_df" /><Op t=", " />
+            <Va t="key" /><Op t="=" /><Str t='"order_id"' /><Op t=")" />
           </L>
           <L n={8}>
-            <I /><Va t="store" /><Op t=" = " />
-            <Va t="context" /><Op t="." /><Va t="store" />
+            <Va t="dup_payments" /><Op t=" = " />
+            <Fn t="find_duplicates" /><Op t="(" /><Va t="payment_df" /><Op t=", " />
+            <Va t="key" /><Op t="=" /><Str t='"transaction_id"' /><Op t=")" />
           </L>
-          <L n={9}>
-            <I /><Va t="cid" /><Op t=" = " />
-            <Va t="context" /><Op t="." /><Va t="conversation_id" />
-          </L>
-          <L n={10} />
+          <L n={9} />
 
-          {/* ═══ Step 1: Store save user msg ═══ */}
+          {/* ═══ Step 3: Cross-match ═══ */}
+          <L n={10}>
+            <Cmt t="# 步骤3：跨表核对 — 一方有、另一方没有" />
+          </L>
           <L n={11}>
-            <I /><Cmt t="# 1. EdgeOne Store: save user message for history" />
+            <Va t="order_only" /><Op t=", " /><Va t="pay_only" /><Op t=", " />
+            <Va t="matched" /><Op t=" = " />
+            <Fn t="cross_match" /><Op t="(" />
+            <Va t="order_df" /><Op t=", " /><Va t="payment_df" /><Op t=", " />
+            <Va t="on" /><Op t="=" /><Str t='"order_id"' /><Op t=")" />
           </L>
-          <L n={12}>
-            <I /><Kw t="await " /><Va t="store" /><Op t="." />
-            <Fn t="append_message" /><Op t="(" />
-            <Va t="cid" /><Op t=", " />
-            <Str t='"user"' /><Op t=", " /><Va t="message" /><Op t=")" />
-          </L>
-          <L n={13} />
+          <L n={12} />
 
-          {/* ═══ Step 2: Session store ═══ */}
+          {/* ═══ Step 4: Amount Compare ═══ */}
+          <L n={13}>
+            <Cmt t="# 步骤4：金额比对 — 同号金额不一致" />
+          </L>
           <L n={14}>
-            <I /><Cmt t="# 2. Inject Claude Agent SDK session memory" />
+            <Va t="amount_mismatch" /><Op t=" = " />
+            <Fn t="compare_amount" /><Op t="(" />
+            <Va t="matched" /><Op t=", " />
+            <Va t="col_a" /><Op t="=" /><Str t='"amount_x"' /><Op t=", " />
+            <Va t="col_b" /><Op t="=" /><Str t='"amount_y"' /><Op t=")" />
           </L>
-          <L n={15}>
-            <I /><Va t="session_store" /><Op t=" = " />
-            <Va t="store" /><Op t="." /><Fn t="claude_session_store" /><Op t="()" />
-          </L>
-          <L n={16} />
+          <L n={15} />
 
-          {/* ═══ Step 3: One-click tools conversion ═══ */}
+          {/* ═══ Step 5: Status Check ═══ */}
+          <L n={16}>
+            <Cmt t="# 步骤5：状态一致性检查" />
+          </L>
           <L n={17}>
-            <I /><Cmt t="# 3. EdgeOne Tools: one-click convert to Claude MCP Server" />
+            <Va t="status_mismatch" /><Op t=" = " />
+            <Fn t="check_status" /><Op t="(" />
+            <Va t="matched" /><Op t=", " />
+            <Str t='"order_status"' /><Op t=", " /><Str t='"payment_status"' /><Op t=")" />
           </L>
-          <L n={18}>
-            <I /><Va t="edgeone_mcp" /><Op t=" = " />
-            <Va t="context" /><Op t="." /><Va t="tools" /><Op t="." />
-            <Fn t="to_claude_mcp_server" /><Op t="(" />
-            <Str t='"edgeone"' /><Op t=")" />
-          </L>
+          <L n={18} />
+
+          {/* ═══ Step 6: Time Anomaly ═══ */}
           <L n={19}>
-            <I /><Va t="mcp_server" /><Op t=" = " />
-            <Fn t="create_sdk_mcp_server" /><Op t="(" />
+            <Cmt t="# 步骤6：时间异常检测" />
           </L>
           <L n={20}>
-            <I level={2} /><Va t="name" /><Op t="=" />
-            <Va t="edgeone_mcp" /><Op t="." /><Va t="name" /><Op t="," />
+            <Va t="time_anomaly" /><Op t=" = " />
+            <Fn t="check_time" /><Op t="(" />
+            <Va t="matched" /><Op t=", " />
+            <Str t='"pay_time"' /><Op t=", " /><Str t='"order_time"' /><Op t=")" />
           </L>
-          <L n={21}>
-            <I level={2} /><Va t="tools" /><Op t="=" />
-            <Va t="edgeone_mcp" /><Op t="." /><Va t="tools" /><Op t="," />
-          </L>
-          <L n={22}>
-            <I /><Op t=")" />
-          </L>
-          <L n={23} />
+          <L n={21} />
 
-          {/* ═══ Step 4: Agent Options ═══ */}
+          {/* ═══ Step 7: Report ═══ */}
+          <L n={22}>
+            <Cmt t="# 步骤7：生成差异报告" />
+          </L>
+          <L n={23}>
+            <Fn t="generate_report" /><Op t="(" />
+          </L>
           <L n={24}>
-            <I /><Cmt t="# 4. Build Agent run options" />
+            <I /><Va t="order_only" /><Op t="=" /><Va t="order_only" /><Op t="," />
           </L>
           <L n={25}>
-            <I /><Va t="options" /><Op t=" = " />
-            <Fn t="ClaudeAgentOptions" /><Op t="(" />
+            <I /><Va t="pay_only" /><Op t="=" /><Va t="pay_only" /><Op t="," />
           </L>
           <L n={26}>
-            <I level={2} /><Va t="model" /><Op t="=" />
-            <Fn t="resolve_model_name" /><Op t="()," />
+            <I /><Va t="amount_mismatch" /><Op t="=" /><Va t="amount_mismatch" /><Op t="," />
           </L>
           <L n={27}>
-            <I level={2} /><Va t="system_prompt" /><Op t="=" />
-            <Va t="SYSTEM_PROMPT" /><Op t="," />
+            <I /><Va t="duplicates" /><Op t="=" /><Va t="dup_orders" /><Op t=" + " />
+            <Va t="dup_payments" /><Op t="," />
           </L>
           <L n={28}>
-            <I level={2} /><Va t="session_store" /><Op t="=" />
-            <Va t="session_store" /><Op t="," />
+            <I /><Va t="status_mismatch" /><Op t="=" /><Va t="status_mismatch" /><Op t="," />
           </L>
           <L n={29}>
-            <I level={2} /><Va t="mcp_servers" /><Op t="={" />
-            <Va t="edgeone_mcp" /><Op t="." /><Va t="name" /><Op t=": " />
-            <Va t="mcp_server" /><Op t="}," />
+            <I /><Va t="time_anomaly" /><Op t="=" /><Va t="time_anomaly" /><Op t="," />
           </L>
           <L n={30}>
-            <I level={2} /><Va t="allowed_tools" /><Op t="=" />
-            <Va t="edgeone_mcp" /><Op t="." /><Va t="allowed_tools" /><Op t="," />
-          </L>
-          <L n={31}>
-            <I level={2} /><Va t="tools" /><Op t="=[" />
-            <Str t='"Skill"' /><Op t=", " /><Str t='"Read"' /><Op t="]," />
-          </L>
-          <L n={32}>
-            <I level={2} /><Va t="skills" /><Op t="=" />
-            <Str t='"all"' /><Op t="," />
-          </L>
-          <L n={33}>
-            <I level={2} /><Va t="permission_mode" /><Op t="=" />
-            <Str t='"dontAsk"' /><Op t="," />
-          </L>
-          <L n={34}>
-            <I level={2} /><Va t="settings" /><Op t="={" />
-            <Str t='"permissions"' /><Op t=": {" />
-            <Str t='"allow"' /><Op t=": [" /><Str t='"Read(.claude/skills/**)"' /><Op t="]}}," />
-          </L>
-          <L n={35}>
-            <I level={2} /><Va t="env" /><Op t="=" />
-            <Fn t="collect_gateway_env" /><Op t="()," />
-          </L>
-          <L n={36}>
-            <I /><Op t=")" />
-          </L>
-          <L n={37} />
-
-          {/* ═══ Step 5: Launch Agent ═══ */}
-          <L n={38}>
-            <I /><Cmt t="# 5. Launch Claude Agent" />
-          </L>
-          <L n={39}>
-            <I /><Va t="result" /><Op t=" = " />
-            <Fn t="query" /><Op t="(" /><Va t="prompt" /><Op t="=" />
-            <Va t="message" /><Op t=", " /><Va t="options" /><Op t="=" />
-            <Va t="options" /><Op t=")" />
-          </L>
-          <L n={40}>
-            <I /><Va t="assistant_text" /><Op t=" = " />
-            <Kw t="await " /><Fn t="collect_assistant_text" /><Op t="(" />
-            <Va t="result" /><Op t=")" />
-          </L>
-          <L n={41} />
-
-          {/* ═══ Step 6: Save reply ═══ */}
-          <L n={42}>
-            <I /><Cmt t="# 6. EdgeOne Store: save assistant reply for /history" />
-          </L>
-          <L n={43}>
-            <I /><Kw t="await " /><Va t="store" /><Op t="." />
-            <Fn t="append_message" /><Op t="(" />
-            <Va t="cid" /><Op t=", " />
-            <Str t='"assistant"' /><Op t=", " /><Va t="assistant_text" /><Op t=")" />
-          </L>
-          <L n={44}>
-            <I /><Kw t="return " /><Op t="{" />
-            <Str t='"answer"' /><Op t=": " /><Va t="assistant_text" /><Op t="}" />
+            <Op t=")" />
           </L>
         </div>
       </div>
@@ -217,7 +159,7 @@ export default function CodeViewer() {
       {/* -- Footer tag -- */}
       <div className={styles.footer}>
         <span className={styles.footerDot} />
-        <span>Claude Agent SDK · EdgeOne Store · MCP Tools</span>
+        <span>多表核对 · 逐条比对 · 差异报告</span>
       </div>
     </div>
   );

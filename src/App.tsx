@@ -37,7 +37,7 @@ import styles from './App.module.css';
 
 const LAMP_IDS = ['commands', 'files', 'code_interpreter', 'browser'] as const;
 type LampId = typeof LAMP_IDS[number];
-const LAMP_ICONS: Record<string, string> = { commands: '⌨️', files: '📁', code_interpreter: '🐍', browser: '🌐' };
+const LAMP_ICONS: Record<string, string> = { commands: '⌨️', files: '📁', code_interpreter: '🧮', browser: '🌐' };
 
 /**
  * Map an EdgeOne platform tool name to a lamp group.
@@ -767,7 +767,7 @@ function AppInner() {
         <div className={styles.chatPanel}>
           <header className={styles.header}>
             <div className={styles.headerLeft}>
-              <span className={styles.logo}>⬡</span>
+              <span className={styles.logo}>⊞</span>
               <div>
                 <p className={styles.title}>{t("app.title")}</p>
                 <p className={styles.subtitle}>{t("app.subtitle")}</p>

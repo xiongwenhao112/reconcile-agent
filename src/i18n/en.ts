@@ -1,28 +1,28 @@
 const en = {
   // Header
-  "app.title": "Claude Agent Starter",
-  "app.subtitle": "Running on EdgeOne Makers with sandbox tools, session memory & observability",
+  "app.title": "Reconcile Agent",
+  "app.subtitle": "Auto-reconcile orders, payment records & platform bills — find every mismatch",
 
   // Empty state
-  "empty.title": "Claude Agent Starter",
-  "empty.hint": "I'm a Claude assistant running on EdgeOne. I can call sandbox tools, persist session memory, and help you with debugging, file management, code execution, and web browsing.",
-  "empty.features": "Sandbox Tools · Store Memory · Observability",
+  "empty.title": "Reconcile Agent",
+  "empty.hint": "I'm your dedicated reconciliation assistant. Send me your order sheets, payment records, and platform bills — I'll match them line by line: unmatched records, amount discrepancies, duplicates... nothing slips through.",
+  "empty.features": "Multi-sheet matching · Amount comparison · Duplicate detection · Discrepancy report",
 
   // Chat input
-  "chat.placeholder": "Type a message...  ⏎ Send · Shift+⏎ Newline",
-  "chat.hint": "Powered by Claude Agent SDK + EdgeOne Makers · Demo only",
+  "chat.placeholder": "Paste data or describe what to reconcile…  ⏎ Send · Shift+⏎ Newline",
+  "chat.hint": "Upload Excel/CSV or paste table data · Data used in current session only",
 
   // Preset questions
-  "preset.1": "Use terminal commands to check the current system time and OS version.",
-  "preset.2": "Create /tmp/fib.py, write Python code to calculate the first 10 Fibonacci numbers, execute it, and print the result.",
-  "preset.4": "Visit https://edgeone.ai and summarize the page content.",
+  "preset.1": "I have an order sheet and a payment record — help me find which orders have no matching payment.",
+  "preset.2": "Reconcile my order sheet, payment record, and platform bill together — find all differences.",
+  "preset.4": "Check this data for duplicate records and abnormal amounts.",
   "preset.screenshotEdgeOne": "Take a screenshot of edgeone.ai.",
   "preset.skill.sandboxAlgorithms": "Calculate the first 20 Fibonacci numbers and provide the execution result.",
 
   // Tool indicators
   "tool.commands": "Commands",
   "tool.files": "Files",
-  "tool.codeRunner": "Code Runner",
+  "tool.codeRunner": "Data Engine",
   "tool.browser": "Browser",
 
   // Web search activity (in-bubble chip)
@@ -48,16 +48,16 @@ const en = {
   "lang.switch": "中文",
 
   // Sidebar
-  "sidebar.label": "Conversation list",
-  "sidebar.title": "Chats",
-  "sidebar.newChat": "New chat",
-  "sidebar.loading": "Loading conversations...",
+  "sidebar.label": "Reconciliation records",
+  "sidebar.title": "Records",
+  "sidebar.newChat": "New reconciliation",
+  "sidebar.loading": "Loading records...",
   "sidebar.loadMore": "Load more",
   "sidebar.loadingMore": "Loading...",
-  "sidebar.emptyTitle": "No conversations yet",
-  "sidebar.emptyHint": "Click \"New chat\" to start your first conversation.",
-  "sidebar.delete": "Delete conversation",
-  "sidebar.deleteConfirm": "Permanently delete this conversation? This cannot be undone.",
+  "sidebar.emptyTitle": "No records yet",
+  "sidebar.emptyHint": "Click \"New reconciliation\" to start your first check.",
+  "sidebar.delete": "Delete record",
+  "sidebar.deleteConfirm": "Permanently delete this reconciliation record? This cannot be undone.",
 
   // Aria labels (button hover/screen-reader)
   "aria.send": "Send",

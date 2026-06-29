@@ -9,8 +9,8 @@ const zh = {
   "empty.features": "多表核对 · 金额比对 · 重复检测 · 差异报告",
 
   // Chat input
-  "chat.placeholder": "粘贴数据或描述对账需求…  ⏎ 发送 · Shift+⏎ 换行",
-  "chat.hint": "支持上传 Excel/CSV 文件或直接粘贴表格数据 · 数据仅在当前会话中使用",
+  "chat.placeholder": "输入文字或上传文件…  ⏎ 发送 · Shift+⏎ 换行",
+  "chat.hint": "支持上传 Excel/CSV/TXT 文件（最大 10MB）· 也可拖拽文件到此处或 Ctrl+V 粘贴 · 数据仅在当前会话中使用",
 
   // Preset questions
   "preset.1": "我有一份订单表和一份收款流水，帮我核对一下有哪些订单没收款。",

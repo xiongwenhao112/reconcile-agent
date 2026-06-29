@@ -12,7 +12,7 @@
  * This file centralises all paths and request wrappers so adding sub-routes later is straightforward.
  */
 
-import type { Message, ImageSsePayload, ListConversationsParams, ListConversationsResponse } from './types';
+import type { Message, ImageSsePayload, FileAttachment, ListConversationsParams, ListConversationsResponse } from './types';
 
 export const API = {
   chat: '/chat',
@@ -94,27 +94,49 @@ export function sendMessageStream(
   conversationId?: string,
   messageIds?: { userMsgId: string; botMsgId: string },
   userId?: string,
+  files?: FileAttachment[],
 ): AbortController {
   const ctrl = new AbortController();
 
   (async () => {
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      const hasFiles = files && files.length > 0;
+      let body: BodyInit;
+      let headers: Record<string, string> = {};
+
       if (conversationId) {
         headers['makers-conversation-id'] = conversationId;
+      }
+
+      if (hasFiles) {
+        // Use FormData for file uploads
+        const formData = new FormData();
+        formData.append('message', message);
+        if (messageIds?.userMsgId) formData.append('userMsgId', messageIds.userMsgId);
+        if (messageIds?.botMsgId) formData.append('botMsgId', messageIds.botMsgId);
+        if (userId) formData.append('userId', userId);
+        files!.forEach((file, i) => {
+          formData.append(`file_name_${i}`, file.name);
+          formData.append(`file_type_${i}`, file.type);
+          formData.append(`file_data_${i}`, file.data);
+        });
+        formData.append('file_count', String(files!.length));
+        body = formData;
+        // Let fetch set Content-Type with boundary for FormData
+      } else {
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify({
+          message,
+          userMsgId: messageIds?.userMsgId,
+          botMsgId: messageIds?.botMsgId,
+          userId,
+        });
       }
 
       const res = await fetch(API.chat, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          message,
-          userMsgId: messageIds?.userMsgId,
-          botMsgId: messageIds?.botMsgId,
-          userId,
-        }),
+        body,
         signal: ctrl.signal,
       });
 

@@ -4,6 +4,7 @@ import type {
   ToolLampState,
   ImageAttachment,
   ImageSsePayload,
+  FileAttachment,
   ConversationSummary,
 } from './types';
 import {
@@ -400,7 +401,7 @@ function AppInner() {
     abortCtrlRef.current = null;
   }, []);
 
-  const handleSend = useCallback(async (text: string) => {
+  const handleSend = useCallback(async (text: string, files?: FileAttachment[]) => {
     initDoneRef.current = true;
     setRightPanelMode('debug');
 
@@ -409,6 +410,7 @@ function AppInner() {
       role: 'user',
       content: text,
       timestamp: Date.now(),
+      files: files && files.length > 0 ? files : undefined,
     };
 
     const botMsgId = crypto.randomUUID();
@@ -600,7 +602,7 @@ function AppInner() {
         updateBotMessage(content => content || t("status.error"));
         finishStream();
       },
-    }, conversationIdRef.current, { userMsgId: userMsg.id, botMsgId }, eoUuidRef.current);
+    }, conversationIdRef.current, { userMsgId: userMsg.id, botMsgId }, eoUuidRef.current, files);
 
     abortCtrlRef.current = ctrl;
   }, [updateBotMessage, setBotActivity, finishBotActivity, clearBotStreaming, handleImageEvent, finishStream, refreshConversations, t]);

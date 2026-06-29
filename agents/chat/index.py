@@ -23,6 +23,7 @@ Tools:
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
 import time
 from typing import Any, AsyncGenerator
@@ -113,6 +114,65 @@ def _normalize_uuid(value: str) -> str | None:
         return str(UUID(value))
     except (TypeError, ValueError):
         return None
+
+
+def _parse_uploaded_files(body: dict) -> tuple[list[dict], str]:
+    """
+    Parse uploaded files from request body (FormData parsed by EdgeOne).
+    
+    Returns (files_list, augmented_message) where:
+    - files_list: list of dicts with name/type/data (base64)
+    - augmented_message: original message with file context appended
+    
+    Handles two scenarios:
+    1. FormData (multipart): body contains file_name_0, file_type_0, file_data_0, etc.
+    2. JSON: body has a 'files' array (fallback).
+    """
+    files = []
+    
+    # Check for FormData-style keys
+    file_count_str = body.get("file_count")
+    if file_count_str:
+        try:
+            file_count = int(file_count_str)
+            for i in range(file_count):
+                name = body.get(f"file_name_{i}", f"file_{i}")
+                ftype = body.get(f"file_type_{i}", "application/octet-stream")
+                data = body.get(f"file_data_{i}", "")
+                if data:
+                    files.append({"name": name, "type": ftype, "data": data})
+        except (ValueError, TypeError):
+            pass
+    
+    # Fallback: JSON files array
+    if not files:
+        json_files = body.get("files")
+        if isinstance(json_files, list):
+            files = json_files
+    
+    return files
+
+
+def _augment_message_with_files(user_message: str, files: list[dict]) -> str:
+    """
+    Augment the user message with file context so the agent knows about uploaded files.
+    """
+    if not files:
+        return user_message
+    
+    file_names = [f.get("name", f"file_{i}") for i, f in enumerate(files)]
+    file_list = "\n".join(f"- {name}" for name in file_names)
+    
+    file_context = (
+        f"\n\n[用户上传了以下文件，请先用 files 工具读取它们的内容进行对账分析：]\n"
+        f"{file_list}"
+    )
+    
+    # If user message is empty or generic, provide a clear instruction
+    if not user_message.strip() or user_message.strip() == "请帮我对账以下文件":
+        return f"请帮我对账以下上传的文件：\n{file_list}\n\n请先读取每个文件的内容，了解其列名和数据结构，然后进行逐条对账分析。"
+    
+    return user_message + file_context
 
 
 async def resolve_claude_session_binding(
@@ -206,6 +266,29 @@ async def handler(ctx: Any) -> AsyncGenerator[str, None]:
 
     body = ctx.request.body
     user_message: str = body.get("message", "") if isinstance(body, dict) else ""
+    
+    # Parse uploaded files
+    uploaded_files = _parse_uploaded_files(body) if isinstance(body, dict) else []
+    
+    # Write uploaded files to working directory so the agent's `files` tool can read them
+    if uploaded_files:
+        try:
+            for f in uploaded_files:
+                fname = f.get("name", "uploaded_file")
+                fdata = f.get("data", "")
+                if fdata:
+                    # Ensure safe filename
+                    safe_name = os.path.basename(fname) or "uploaded_file"
+                    file_path = os.path.join(os.getcwd(), safe_name)
+                    with open(file_path, "wb") as fh:
+                        fh.write(base64.b64decode(fdata))
+                    logger.log(f"[upload] saved: {safe_name} ({len(fdata)} b64 chars)")
+        except Exception as e:
+            logger.error(f"[upload] failed to write files: {e}")
+    
+    # Augment user message with file context
+    user_message = _augment_message_with_files(user_message, uploaded_files)
+    
     if not user_message.strip():
         yield sse_event("error", {"message": "'message' is required"})
         yield sse_event("done", {"stopped": False})

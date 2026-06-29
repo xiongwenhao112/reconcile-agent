@@ -15,12 +15,22 @@ export interface ImageSsePayload {
   size?: number;
 }
 
+/** User-uploaded file attachment (before sending, in-memory only) */
+export interface FileAttachment {
+  name: string;
+  size: number;
+  type: string;
+  data: string;            // base64 encoded file content (without data URI prefix)
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
   images?: (ImageAttachment | string)[];
+  /** Files attached to this message (user messages only) */
+  files?: FileAttachment[];
   activity?: {
     type: 'web_search';
     label: string;

@@ -9,8 +9,8 @@ const en = {
   "empty.features": "Multi-sheet matching · Amount comparison · Duplicate detection · Discrepancy report",
 
   // Chat input
-  "chat.placeholder": "Paste data or describe what to reconcile…  ⏎ Send · Shift+⏎ Newline",
-  "chat.hint": "Upload Excel/CSV or paste table data · Data used in current session only",
+  "chat.placeholder": "Type or upload files…  ⏎ Send · Shift+⏎ Newline",
+  "chat.hint": "Supports Excel/CSV/TXT uploads (max 10MB) · Drag & drop or Ctrl+V to paste files · Data used in current session only",
 
   // Preset questions
   "preset.1": "I have an order sheet and a payment record — help me find which orders have no matching payment.",

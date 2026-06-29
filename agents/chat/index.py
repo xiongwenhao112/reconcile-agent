@@ -75,7 +75,7 @@ SYSTEM_PROMPT = (
   '- **状态不一致**：订单状态在两张表中不匹配（如：订单表显示"已支付"但收款流水中无对应记录）。\n'
   '- **时间异常**：收款时间早于订单创建时间等不合理情况。\n\n'
   '## 工作流程\n'
-  '1. 如果用户上传了文件（Excel/CSV），先用 files 工具读取文件内容，然后用 code_interpreter 解析数据。\n'
+  '1. 如果用户上传了文件（Excel/CSV），直接用 code_interpreter 按系统提供的绝对路径（~/uploads/）读取并解析（Excel 用 pandas.read_excel，CSV 用 read_csv）。\n'
   '2. 如果用户直接粘贴了表格数据，直接用 code_interpreter 解析。\n'
   '3. 确认每份数据的列名和关键字段（如：订单号、交易号、金额、时间等）。\n'
   '4. 与用户确认对账维度（用哪个字段做关联匹配）。\n'
@@ -94,7 +94,7 @@ SYSTEM_PROMPT = (
   '- **commands**：执行 shell 命令（如安装 Python 依赖）。\n'
   '- **browser**：如需从网页获取参考信息（如汇率、手续费标准等）。\n\n'
   '## 工具使用规则\n'
-  '1. 读取用户文件前，先用 files list 确认文件存在。\n'
+  '1. 读取用户上传的文件时，直接用 code_interpreter 按给定的绝对路径（~/uploads/）读取，不要用 files_list/files_exists 去搜索。\n'
   '2. 对账逻辑全部用 Python（pandas）在 code_interpreter 中完成。\n'
   '3. 一次只调用一个工具，等待结果后再决定下一步。\n'
   '4. 如果工具调用失败，简要说明原因并尝试修正，不要盲目重试。\n'
@@ -148,16 +148,18 @@ def _augment_message_with_files(user_message: str, files: list[dict], cwd: str =
     )
     
     file_context = (
-        f"\n\n[系统提示] 用户上传了以下文件，已保存在沙箱的 uploads/ 目录下：\n"
+        f"\n\n[系统提示] 用户上传的文件已保存在沙箱的 ~/uploads/ 目录（绝对路径 /home/user/uploads/）：\n"
         f"{file_list}\n\n"
-        f"请用 code_interpreter（Python + pandas）从 uploads/<文件名> 读取数据"
-        f"（CSV 用 read_csv，Excel 用 read_excel，缺 openpyxl 先用 commands 安装 pip install openpyxl），"
-        f"再逐条对账。不要去本地或其它目录找它们，它们就在沙箱当前工作目录的 uploads/ 下。"
+        f"请直接用 code_interpreter（Python + pandas）按绝对路径读取，例如："
+        f"import os, pandas as pd; df = pd.read_excel(os.path.expanduser('~/uploads/<文件名>'))"
+        f"（CSV 用 read_csv，Excel 用 read_excel；若缺 openpyxl，先在 code_interpreter 里 "
+        f"import subprocess; subprocess.run(['pip','install','openpyxl'])）。"
+        f"不要用 files_exists/files_list 去别处搜索文件，直接按上面的绝对路径读取。"
     )
     
     # If user message is empty or generic, provide a clear instruction
     if not user_message.strip() or user_message.strip() == "请帮我对账以下文件":
-        return f"请帮我对账以下上传的文件（已存于沙箱 uploads/ 目录）：\n{file_list}\n\n请用 code_interpreter 从 uploads/<文件名> 读取每个文件，了解列结构后逐条对账，最后给出差异报告。"
+        return f"请帮我对账以下上传的文件（已存于沙箱 ~/uploads/ 目录，绝对路径 /home/user/uploads/）：\n{file_list}\n\n请直接用 code_interpreter 按绝对路径 os.path.expanduser('~/uploads/<文件名>') 读取每个文件（不要用 files_list 搜索），了解列结构后逐条对账，最后给出差异报告。"
     
     return user_message + file_context
 
@@ -232,7 +234,7 @@ def build_agent_options(
         setting_sources=["project"],
         skills="all",
         permission_mode="dontAsk",
-        max_turns=5,
+        max_turns=20,
         env=collect_gateway_env(),
         include_partial_messages=True,
         max_buffer_size=20 * 1024 * 1024,  # 20MB — enough for browser screenshots
@@ -277,10 +279,11 @@ async def handler(ctx: Any) -> AsyncGenerator[str, None]:
                     continue
                 code = (
                     "import base64, os\n"
-                    "os.makedirs('uploads', exist_ok=True)\n"
-                    f"_p = os.path.join('uploads', {json.dumps(fname)})\n"
+                    "_d = os.path.expanduser('~/uploads')\n"
+                    "os.makedirs(_d, exist_ok=True)\n"
+                    f"_p = os.path.join(_d, {json.dumps(fname)})\n"
                     f"open(_p, 'wb').write(base64.b64decode({json.dumps(fdata)}))\n"
-                    "print('SAVED', os.path.abspath(_p), os.path.getsize(_p))\n"
+                    "print('SAVED', _p, os.path.getsize(_p))\n"
                 )
                 try:
                     result = await sandbox.run_code(code, language="python")

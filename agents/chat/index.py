@@ -116,41 +116,20 @@ def _normalize_uuid(value: str) -> str | None:
         return None
 
 
-def _parse_uploaded_files(body: dict) -> tuple[list[dict], str]:
+def _parse_uploaded_files(body: dict) -> list[dict]:
     """
-    Parse uploaded files from request body (FormData parsed by EdgeOne).
+    Parse uploaded files from request body (JSON).
     
-    Returns (files_list, augmented_message) where:
-    - files_list: list of dicts with name/type/data (base64)
-    - augmented_message: original message with file context appended
-    
-    Handles two scenarios:
-    1. FormData (multipart): body contains file_name_0, file_type_0, file_data_0, etc.
-    2. JSON: body has a 'files' array (fallback).
+    Frontend sends files as a JSON array under the `files` key, each with:
+      - name: str
+      - type: str (MIME type)
+      - size: int
+      - data: str (base64-encoded file content)
     """
-    files = []
-    
-    # Check for FormData-style keys
-    file_count_str = body.get("file_count")
-    if file_count_str:
-        try:
-            file_count = int(file_count_str)
-            for i in range(file_count):
-                name = body.get(f"file_name_{i}", f"file_{i}")
-                ftype = body.get(f"file_type_{i}", "application/octet-stream")
-                data = body.get(f"file_data_{i}", "")
-                if data:
-                    files.append({"name": name, "type": ftype, "data": data})
-        except (ValueError, TypeError):
-            pass
-    
-    # Fallback: JSON files array
-    if not files:
-        json_files = body.get("files")
-        if isinstance(json_files, list):
-            files = json_files
-    
-    return files
+    json_files = body.get("files")
+    if isinstance(json_files, list):
+        return json_files
+    return []
 
 
 def _augment_message_with_files(user_message: str, files: list[dict]) -> str:

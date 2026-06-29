@@ -108,30 +108,14 @@ export function sendMessageStream(
         headers['makers-conversation-id'] = conversationId;
       }
 
-      if (hasFiles) {
-        // Use FormData for file uploads
-        const formData = new FormData();
-        formData.append('message', message);
-        if (messageIds?.userMsgId) formData.append('userMsgId', messageIds.userMsgId);
-        if (messageIds?.botMsgId) formData.append('botMsgId', messageIds.botMsgId);
-        if (userId) formData.append('userId', userId);
-        files!.forEach((file, i) => {
-          formData.append(`file_name_${i}`, file.name);
-          formData.append(`file_type_${i}`, file.type);
-          formData.append(`file_data_${i}`, file.data);
-        });
-        formData.append('file_count', String(files!.length));
-        body = formData;
-        // Let fetch set Content-Type with boundary for FormData
-      } else {
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify({
-          message,
-          userMsgId: messageIds?.userMsgId,
-          botMsgId: messageIds?.botMsgId,
-          userId,
-        });
-      }
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify({
+        message,
+        userMsgId: messageIds?.userMsgId,
+        botMsgId: messageIds?.botMsgId,
+        userId,
+        ...(hasFiles ? { files: files!.map(f => ({ name: f.name, type: f.type, size: f.size, data: f.data })) } : {}),
+      });
 
       const res = await fetch(API.chat, {
         method: 'POST',
